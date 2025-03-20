@@ -24,27 +24,31 @@ RUN powershell -Command \
 	Add-WindowsFeature NET-WCF-TCP-PortSharing45 ; \
 	Add-WindowsFeature WoW64-Support ;
 
+# Copie o arquivo ZIP do Oracle Client para o contêiner
+ADD https://download.oracle.com/otn_software/nt/instantclient/2370000/instantclient-basic-windows.x64-23.7.0.25.01.zip /install/oracle-basic.zip
+ADD https://download.oracle.com/otn_software/nt/instantclient/2370000/instantclient-odbc-windows.x64-23.7.0.25.01.zip /install/oracle-odbc.zip
+ADD https://javadl.oracle.com/webapps/download/AutoDL?BundleId=251656_7ed26d28139143f38c58992680c214a5 /install/jre-8u441-windows-x64.exe.exe
+ADD https://aka.ms/vs/16/release/vc_redist.x64.exe /install/vc_redist.x64.exe
+COPY ./Pre-Req/wkhtmltox-0.12.5-1.msvc2015-win64.exe /install
 
 # Diretorio das fotes
 WORKDIR /Windows/Fonts
 COPY "./Pre-Req/Exo_2/*" ./
 COPY "./Pre-Req/Segoe_UI/*" ./
 
-# Defina o diretório de trabalho
-WORKDIR /install
-# Copie o arquivo ZIP do Oracle Client para o contêiner
-COPY ./Pre-Req/jre-8u441-windows-x64.exe /install
-COPY ./Pre-Req/VC_redist.x64.exe /install
-COPY ./oracle-client/ /oracle_client
-COPY ./Pre-Req/wkhtmltox-0.12.5-1.msvc2015-win64.exe ./
-
 # Instale o Visual C++ Redistributable (se necessário)
+WORKDIR /install
 RUN powershell -Command .\VC_redist.x64.exe /s
 RUN powershell -Command .\wkhtmltox-0.12.5-1.msvc2015-win64.exe /S
-RUN powershell -Command Start-Process jre-8u441-windows-x64.exe -ArgumentList "/s","INSTALLDIR=C:\java" -wait
+RUN powershell -Command Start-Process jre-8u441-windows-x64.exe.exe -ArgumentList "/s","INSTALLDIR=C:\java" -wait
+
+# Extrair os arquivos do oracle
+WORKDIR /oracle_client
+RUN powershell -Command Expand-Archive -Path /install/oracle-basic.zip -DestinationPath . -Force
+RUN powershell -Command Expand-Archive -Path /install/oracle-odbc.zip -DestinationPath . -Force
 
 # Execute o instalador do Oracle Client ODBC (ajuste o comando conforme necessário)
-WORKDIR /oracle_client
+RUN powershell -Command Move-Item /oracle_client/instantclient_23_7/* /oracle_client
 RUN powershell -Command .\odbc_install.exe /s
 
 # Remover a pasta
